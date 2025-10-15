@@ -13,18 +13,14 @@ function App() {
   const [mensaje, setMensaje] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Verificar sesión y manejar confirmación de correo
   useEffect(() => {
     const initApp = async () => {
-      // Verificar si hay parámetros de URL (confirmación de correo)
       const urlParams = new URLSearchParams(window.location.search);
       const accessToken = urlParams.get('access_token');
       const refreshToken = urlParams.get('refresh_token');
 
       if (accessToken && refreshToken) {
-        // Establecer la sesión manualmente
         await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        // Limpiar la URL
         window.history.replaceState({}, document.title, window.location.pathname);
       }
 
@@ -47,7 +43,6 @@ function App() {
     };
   }, []);
 
-  // Cargar datos del usuario autenticado
   useEffect(() => {
     if (!user) return;
 
@@ -126,10 +121,7 @@ function App() {
       email,
       password,
       options: {
-        data: {
-          nombre,
-          tipo_horas,
-        },
+        data: { nombre, tipo_horas },
       },
     });
 
@@ -187,35 +179,43 @@ function App() {
   if (!user) {
     return (
       <div style={{
-        maxWidth: '900px',
-        margin: '60px auto 40px',
-        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        minHeight: '100vh',
+        padding: '40px 20px',
         fontFamily: 'Inter, system-ui, sans-serif',
-        textAlign: 'center'
+        backgroundColor: '#f9fafb'
       }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af', marginBottom: '8px' }}>
-          Control de Horas Compensadas
-        </h1>
-        <p style={{ color: '#4b5563', fontSize: '14px', marginBottom: '24px' }}>
-          Inicia sesión o regístrate para gestionar tus horas
-        </p>
+        <div style={{
+          maxWidth: '500px',
+          width: '100%',
+          textAlign: 'center',
+          marginBottom: '30px'
+        }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af', marginBottom: '8px' }}>
+            Control de Horas Compensadas
+          </h1>
+          <p style={{ color: '#4b5563', fontSize: '14px', marginBottom: '24px' }}>
+            Inicia sesión o regístrate para gestionar tus horas
+          </p>
+        </div>
 
-        {/* Formulario de login */}
         <div style={{
           display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '40px',
-          flexWrap: 'wrap',
-          margin: '0 auto 20px'
+          flexDirection: 'column',
+          gap: '30px',
+          width: '100%',
+          maxWidth: '500px'
         }}>
+          {/* Formulario de login */}
           <form onSubmit={handleLogin} style={{
             background: '#fff',
             padding: '24px',
             borderRadius: '12px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            textAlign: 'left',
-            width: '300px'
+            textAlign: 'left'
           }}>
             <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#1e40af' }}>Iniciar Sesión</h3>
             <div style={{ marginBottom: '16px' }}>
@@ -274,8 +274,7 @@ function App() {
             padding: '24px',
             borderRadius: '12px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            textAlign: 'left',
-            width: '300px'
+            textAlign: 'left'
           }}>
             <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#0ea5e9' }}>Crear Cuenta</h3>
             <div style={{ marginBottom: '16px' }}>
@@ -366,7 +365,7 @@ function App() {
 
         <footer style={{
           textAlign: 'center',
-          marginTop: '32px',
+          marginTop: '40px',
           color: '#6b7280',
           fontSize: '13px'
         }}>
@@ -420,7 +419,6 @@ function App() {
         </button>
       </header>
 
-      {/* Resumen visible */}
       <div style={{
         background: '#dbeafe',
         padding: '20px',
@@ -442,7 +440,6 @@ function App() {
         </p>
       </div>
 
-      {/* Formulario */}
       <section style={{
         marginBottom: '32px',
         background: '#fff',
@@ -552,7 +549,6 @@ function App() {
         </form>
       </section>
 
-      {/* Tabla de registros */}
       <section style={{
         maxWidth: '800px',
         margin: '0 auto',
@@ -614,7 +610,6 @@ function App() {
         )}
       </section>
 
-      {/* Pie de página */}
       <footer style={{
         textAlign: 'center',
         marginTop: '40px',
