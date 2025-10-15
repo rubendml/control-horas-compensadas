@@ -12,7 +12,6 @@ function App() {
   const [horasOtros, setHorasOtros] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  // Verificar sesión al cargar
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -31,56 +30,32 @@ function App() {
     };
   }, []);
 
-  // Cargar datos del usuario autenticado
   useEffect(() => {
     if (!user) return;
 
     const loadData = async () => {
       try {
-        console.log('Cargando perfil para user.id:', user.id);
-
-        // Perfil
-        const { data: prof, error: profileError } = await supabase
+        const {  prof } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
-        if (profileError) {
-          console.error('Error al cargar perfil:', profileError.message);
-          setProfile(null);
-        } else {
-          console.log('Perfil cargado:', prof);
-          setProfile(prof);
-        }
+        setProfile(prof);
 
-        // Fechas permitidas
-        const { data: fech, error: fechasError } = await supabase
+        const {  fech } = await supabase
           .from('fechas_permitidas')
           .select('*')
           .order('fecha', { ascending: true });
-        if (fechasError) {
-          console.error('Error al cargar fechas:', fechasError.message);
-          setFechas([]);
-        } else {
-          console.log('Fechas cargadas:', fech);
-          setFechas(fech || []);
-        }
+        setFechas(fech || []);
 
-        // Registros del usuario
-        const { data: regs, error: registrosError } = await supabase
+        const {  regs } = await supabase
           .from('registros_horas')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
-        if (registrosError) {
-          console.error('Error al cargar registros:', registrosError.message);
-          setRegistros([]);
-        } else {
-          console.log('Registros cargados:', regs);
-          setRegistros(regs || []);
-        }
+        setRegistros(regs || []);
       } catch (err) {
-        console.error('Error general en loadData:', err.message);
+        console.error('Error al cargar datos:', err.message);
       }
     };
 
@@ -112,9 +87,7 @@ function App() {
     const password = e.target.password.value;
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      alert('Error: ' + error.message);
-    }
+    if (error) alert('Error: ' + error.message);
   };
 
   const handleLogout = async () => {
@@ -144,25 +117,20 @@ function App() {
       setIngreso('');
       setSalida('');
       setHorasOtros('');
-      // Recargar registros
-      const { data: newRegs, error: reloadError } = await supabase
+      const {  newRegs } = await supabase
         .from('registros_horas')
         .select('*')
         .eq('user_id', user.id);
-      if (reloadError) {
-        console.error('Error al recargar registros:', reloadError.message);
-      } else {
-        setRegistros(newRegs || []);
-      }
+      setRegistros(newRegs || []);
     }
   };
 
   if (!user) {
     return (
-      <div style={{
-        maxWidth: '480px',
-        margin: '60px auto 40px',
-        padding: '20px',
+      <div style={{ 
+        maxWidth: '480px', 
+        margin: '80px auto 40px', 
+        padding: '24px', 
         fontFamily: 'Inter, system-ui, sans-serif',
         textAlign: 'center'
       }}>
@@ -172,10 +140,10 @@ function App() {
         <p style={{ color: '#4b5563', fontSize: '14px', marginBottom: '24px' }}>
           Inicia sesión para gestionar tus horas
         </p>
-        <form onSubmit={handleLogin} style={{
-          background: '#fff',
-          padding: '24px',
-          borderRadius: '12px',
+        <form onSubmit={handleLogin} style={{ 
+          background: '#fff', 
+          padding: '24px', 
+          borderRadius: '12px', 
           boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
           textAlign: 'left'
         }}>
@@ -227,11 +195,11 @@ function App() {
             Iniciar Sesión
           </button>
         </form>
-        <footer style={{
-          textAlign: 'center',
-          marginTop: '32px',
-          color: '#6b7280',
-          fontSize: '13px'
+        <footer style={{ 
+          textAlign: 'center', 
+          marginTop: '32px', 
+          color: '#6b7280', 
+          fontSize: '13px' 
         }}>
           Derechos reservados - Creaciones Manotas
         </footer>
@@ -240,27 +208,27 @@ function App() {
   }
 
   return (
-    <div style={{
-      maxWidth: '900px',
-      margin: '0 auto',
-      padding: '20px',
-      fontFamily: 'Inter, system-ui, sans-serif',
+    <div style={{ 
+      maxWidth: '900px', 
+      margin: '0 auto', 
+      padding: '20px', 
+      fontFamily: 'Inter, system-ui, sans-serif', 
       color: '#1f2937',
       textAlign: 'center',
       backgroundColor: '#f9fafb',
       minHeight: '100vh'
     }}>
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+      <header style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
         marginBottom: '24px',
         flexWrap: 'wrap',
         gap: '12px'
       }}>
-        <h1 style={{
-          fontSize: '22px',
-          fontWeight: '700',
+        <h1 style={{ 
+          fontSize: '22px', 
+          fontWeight: '700', 
           color: '#1e40af',
           margin: 0
         }}>
@@ -284,12 +252,12 @@ function App() {
       </header>
 
       {/* Resumen visible */}
-      <div style={{
-        background: '#dbeafe',
-        padding: '20px',
-        borderRadius: '12px',
-        textAlign: 'center',
-        marginBottom: '28px',
+      <div style={{ 
+        background: '#dbeafe', 
+        padding: '20px', 
+        borderRadius: '12px', 
+        textAlign: 'center', 
+        marginBottom: '28px', 
         border: '1px solid #bfdbfe',
         maxWidth: '600px',
         margin: '0 auto 28px'
@@ -306,30 +274,30 @@ function App() {
       </div>
 
       {/* Formulario */}
-      <section style={{
-        marginBottom: '32px',
-        background: '#fff',
-        padding: '20px',
-        borderRadius: '12px',
+      <section style={{ 
+        marginBottom: '32px', 
+        background: '#fff', 
+        padding: '20px', 
+        borderRadius: '12px', 
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
         maxWidth: '700px',
         margin: '0 auto 32px',
         textAlign: 'center'
       }}>
-        <h2 style={{
-          fontSize: '20px',
-          fontWeight: '600',
-          marginBottom: '16px',
+        <h2 style={{ 
+          fontSize: '20px', 
+          fontWeight: '600', 
+          marginBottom: '16px', 
           color: '#1e3a8a',
           textAlign: 'center'
         }}>
           Registrar horas
         </h2>
         <form onSubmit={handleSubmit} style={{ textAlign: 'center' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: '12px',
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
+            gap: '12px', 
             marginBottom: '16px',
             justifyContent: 'center'
           }}>
@@ -416,15 +384,15 @@ function App() {
       </section>
 
       {/* Tabla de registros */}
-      <section style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        textAlign: 'center'
+      <section style={{ 
+        maxWidth: '800px', 
+        margin: '0 auto', 
+        textAlign: 'center' 
       }}>
-        <h2 style={{
-          fontSize: '20px',
-          fontWeight: '600',
-          marginBottom: '16px',
+        <h2 style={{ 
+          fontSize: '20px', 
+          fontWeight: '600', 
+          marginBottom: '16px', 
           color: '#1e3a8a',
           textAlign: 'center'
         }}>
@@ -435,15 +403,15 @@ function App() {
             No tienes registros aún.
           </p>
         ) : (
-          <div style={{
-            overflowX: 'auto',
-            width: '100%',
+          <div style={{ 
+            overflowX: 'auto', 
+            width: '100%', 
             margin: '0 auto',
             textAlign: 'center'
           }}>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse',
+            <table style={{ 
+              width: '100%', 
+              borderCollapse: 'collapse', 
               fontSize: '14px',
               minWidth: '600px',
               margin: '0 auto'
@@ -478,12 +446,12 @@ function App() {
       </section>
 
       {/* Pie de página */}
-      <footer style={{
-        textAlign: 'center',
-        marginTop: '40px',
-        paddingTop: '20px',
-        borderTop: '1px solid #e5e7eb',
-        color: '#6b7280',
+      <footer style={{ 
+        textAlign: 'center', 
+        marginTop: '40px', 
+        paddingTop: '20px', 
+        borderTop: '1px solid #e5e7eb', 
+        color: '#6b7280', 
         fontSize: '13px',
         maxWidth: '600px',
         margin: '40px auto 0'
