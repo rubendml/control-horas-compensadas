@@ -187,7 +187,7 @@ function App() {
   if (!user) {
     return (
       <div style={{
-        maxWidth: '500px',
+        maxWidth: '900px',
         margin: '60px auto 40px',
         padding: '24px',
         fontFamily: 'Inter, system-ui, sans-serif',
@@ -200,157 +200,169 @@ function App() {
           Inicia sesión o regístrate para gestionar tus horas
         </p>
 
-        <form onSubmit={handleLogin} style={{
-          background: '#fff',
-          padding: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-          textAlign: 'left',
-          marginBottom: '20px'
+        {/* Formulario de login */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '40px',
+          flexWrap: 'wrap',
+          margin: '0 auto 20px'
         }}>
-          <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#1e40af' }}>Iniciar Sesión</h3>
-          <div style={{ marginBottom: '16px' }}>
-            <input
-              name="email"
-              type="email"
-              placeholder="Correo electrónico"
-              required
+          <form onSubmit={handleLogin} style={{
+            background: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            textAlign: 'left',
+            width: '300px'
+          }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#1e40af' }}>Iniciar Sesión</h3>
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                name="email"
+                type="email"
+                placeholder="Correo electrónico"
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                name="password"
+                type="password"
+                placeholder="Contraseña"
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <button
+              type="submit"
               style={{
                 width: '100%',
                 padding: '12px',
-                border: '1px solid #d1d5db',
+                background: '#2563eb',
+                color: 'white',
+                border: 'none',
                 borderRadius: '8px',
                 fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <input
-              name="password"
-              type="password"
-              placeholder="Contraseña"
-              required
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-          <button
-            type="submit"
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            Iniciar Sesión
-          </button>
-        </form>
-
-        <form onSubmit={handleSignUp} style={{
-          background: '#f0f9ff',
-          padding: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-          textAlign: 'left'
-        }}>
-          <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#0ea5e9' }}>Crear Cuenta</h3>
-          <div style={{ marginBottom: '16px' }}>
-            <input
-              name="nombre"
-              placeholder="Nombre completo"
-              required
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #bae6fd',
-                borderRadius: '8px',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <input
-              name="email"
-              type="email"
-              placeholder="Correo institucional"
-              required
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #bae6fd',
-                borderRadius: '8px',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <input
-              name="password"
-              type="password"
-              placeholder="Contraseña (mín. 6 caracteres)"
-              required
-              minLength="6"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #bae6fd',
-                borderRadius: '8px',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <select
-              name="tipo_horas"
-              required
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #bae6fd',
-                borderRadius: '8px',
-                fontSize: '16px',
-                boxSizing: 'border-box',
-                backgroundColor: 'white'
+                fontWeight: '600',
+                cursor: 'pointer'
               }}
             >
-              <option value="">Selecciona tu objetivo de horas</option>
-              <option value="32">32 horas</option>
-              <option value="40">40 horas</option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: '#0ea5e9',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            Registrarse
-          </button>
-        </form>
+              Iniciar Sesión
+            </button>
+          </form>
+
+          {/* Formulario de registro */}
+          <form onSubmit={handleSignUp} style={{
+            background: '#f0f9ff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            textAlign: 'left',
+            width: '300px'
+          }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#0ea5e9' }}>Crear Cuenta</h3>
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                name="nombre"
+                placeholder="Nombre completo"
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                name="email"
+                type="email"
+                placeholder="Correo institucional"
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                name="password"
+                type="password"
+                placeholder="Contraseña (mín. 6 caracteres)"
+                required
+                minLength="6"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <select
+                name="tipo_horas"
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box',
+                  backgroundColor: 'white'
+                }}
+              >
+                <option value="">Selecciona tu objetivo de horas</option>
+                <option value="32">32 horas</option>
+                <option value="40">40 horas</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#0ea5e9',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Registrarse
+            </button>
+          </form>
+        </div>
 
         <footer style={{
           textAlign: 'center',
