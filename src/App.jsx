@@ -11,18 +11,34 @@ function App() {
   const [salida, setSalida] = useState('');
   const [horasOtros, setHorasOtros] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // Verificar sesión al cargar
+  // Verificar sesión y manejar confirmación de correo
   useEffect(() => {
-    const checkSession = async () => {
+    const initApp = async () => {
+      // Verificar si hay parámetros de URL (confirmación de correo)
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get('access_token');
+      const refreshToken = urlParams.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        // Establecer la sesión manualmente
+        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        // Limpiar la URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
       const { data } = await supabase.auth.getSession();
       setUser(data.session?.user || null);
+      setLoading(false);
     };
-    checkSession();
+
+    initApp();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user || null);
+        setLoading(false);
       }
     );
 
@@ -109,6 +125,12 @@ function App() {
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          nombre,
+          tipo_horas,
+        },
+      },
     });
 
     if (authError) {
@@ -116,26 +138,7 @@ function App() {
       return;
     }
 
-    setTimeout(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: session.user.id,
-            nombre,
-            cedula: '',
-            tipo_horas,
-          });
-
-        if (profileError) {
-          console.error('Error al crear perfil:', profileError.message);
-          alert('Cuenta creada, pero hubo un error al guardar tu perfil. Contacta al administrador.');
-        } else {
-          alert('¡Cuenta creada con éxito! Ahora puedes iniciar sesión.');
-        }
-      }
-    }, 2000);
+    alert('¡Registro exitoso! Revisa tu correo para confirmar tu cuenta.');
   };
 
   const handleLogout = async () => {
@@ -172,6 +175,14 @@ function App() {
       setRegistros(newRegs || []);
     }
   };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', marginTop: '50px' }}>
+        <p>Cargando...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
