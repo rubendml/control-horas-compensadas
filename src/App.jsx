@@ -470,64 +470,80 @@ function App() {
             marginBottom: '16px',
             justifyContent: 'center'
           }}>
-            <select
-              value={selectedFechaId}
-              onChange={(e) => setSelectedFechaId(e.target.value)}
-              required
-              style={{
-                padding: '10px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '15px',
-                minWidth: '140px'
-              }}
-            >
-              <option value="">Selecciona fecha</option>
-              {fechas.map(f => (
-                <option key={f.id} value={f.id}>{f.fecha}</option>
-              ))}
-            </select>
-            <input
-              type="time"
-              value={ingreso}
-              onChange={(e) => setIngreso(e.target.value)}
-              placeholder="Ingreso"
-              style={{
-                padding: '10px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '15px',
-                minWidth: '140px'
-              }}
-            />
-            <input
-              type="time"
-              value={salida}
-              onChange={(e) => setSalida(e.target.value)}
-              placeholder="Salida"
-              style={{
-                padding: '10px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '15px',
-                minWidth: '140px'
-              }}
-            />
-            <input
-              type="number"
-              step="0.25"
-              min="0"
-              value={horasOtros}
-              onChange={(e) => setHorasOtros(e.target.value)}
-              placeholder="Otros (h)"
-              style={{
-                padding: '10px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '15px',
-                minWidth: '140px'
-              }}
-            />
+            <div style={{ textAlign: 'left' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600' }}>Fecha</label>
+              <select
+                value={selectedFechaId}
+                onChange={(e) => setSelectedFechaId(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  minWidth: '140px'
+                }}
+              >
+                <option value="">Selecciona fecha</option>
+                {fechas.map(f => (
+                  <option key={f.id} value={f.id}>{f.fecha}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600' }}>Ingreso real</label>
+              <input
+                type="time"
+                value={ingreso}
+                onChange={(e) => setIngreso(e.target.value)}
+                placeholder="Hora de ingreso"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  minWidth: '140px'
+                }}
+              />
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600' }}>Salida real</label>
+              <input
+                type="time"
+                value={salida}
+                onChange={(e) => setSalida(e.target.value)}
+                placeholder="Hora de salida"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  minWidth: '140px'
+                }}
+              />
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600' }}>Otros (h)</label>
+              <input
+                type="number"
+                step="0.25"
+                min="0"
+                value={horasOtros}
+                onChange={(e) => setHorasOtros(e.target.value)}
+                placeholder="Horas por otros conceptos"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  minWidth: '140px'
+                }}
+              />
+            </div>
           </div>
           <button
             type="submit"
@@ -588,8 +604,8 @@ function App() {
               <thead>
                 <tr style={{ backgroundColor: '#f0f9ff' }}>
                   <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Fecha</th>
-                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Ingreso</th>
-                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Salida</th>
+                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Ingreso real</th>
+                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Salida real</th>
                   <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Otros</th>
                   <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Total día</th>
                 </tr>
