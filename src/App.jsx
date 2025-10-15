@@ -12,7 +12,6 @@ function App() {
   const [horasOtros, setHorasOtros] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  // Verificar sesión al cargar
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -31,7 +30,6 @@ function App() {
     };
   }, []);
 
-  // Cargar datos del usuario autenticado
   useEffect(() => {
     if (!user) return;
 
@@ -106,7 +104,6 @@ function App() {
       return;
     }
 
-    // Registrar en Supabase Auth
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -117,7 +114,6 @@ function App() {
       return;
     }
 
-    // Esperar y crear perfil
     setTimeout(async () => {
       const {  { session }
     } = await supabase.auth.getSession();
@@ -176,7 +172,6 @@ const handleSubmit = async (e) => {
   }
 };
 
-// Pantalla de login y registro
 if (!user) {
   return (
     <div style={{
@@ -193,7 +188,6 @@ if (!user) {
         Inicia sesión o regístrate para gestionar tus horas
       </p>
 
-      {/* Formulario de login */}
       <form onSubmit={handleLogin} style={{
         background: '#fff',
         padding: '24px',
@@ -253,7 +247,6 @@ if (!user) {
         </button>
       </form>
 
-      {/* Formulario de registro */}
       <form onSubmit={handleSignUp} style={{
         background: '#f0f9ff',
         padding: '24px',
@@ -359,7 +352,6 @@ if (!user) {
   );
 }
 
-// Panel principal del usuario
 return (
   <div style={{
     maxWidth: '900px',
@@ -404,7 +396,7 @@ return (
       </button>
     </header>
 
-    {/* Resumen de horas */}
+    {/* Resumen visible */}
     <div style={{
       background: '#dbeafe',
       padding: '20px',
@@ -426,7 +418,7 @@ return (
       </p>
     </div>
 
-    {/* Formulario de registro de horas */}
+    {/* Formulario */}
     <section style={{
       marginBottom: '32px',
       background: '#fff',
