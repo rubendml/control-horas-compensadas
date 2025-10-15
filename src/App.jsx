@@ -12,6 +12,7 @@ function App() {
   const [horasOtros, setHorasOtros] = useState('');
   const [mensaje, setMensaje] = useState('');
 
+  // Verificar sesión al cargar
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -30,6 +31,7 @@ function App() {
     };
   }, []);
 
+  // Cargar datos del usuario autenticado
   useEffect(() => {
     if (!user) return;
 
@@ -87,7 +89,55 @@ function App() {
     const password = e.target.password.value;
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) alert('Error: ' + error.message);
+    if (error) {
+      alert('Error al iniciar sesión: ' + error.message);
+    }
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    const email = e.target.email.value;
+    const password = e.target.password.value;
+    const nombre = e.target.nombre.value;
+    const tipo_horas = parseInt(e.target.tipo_horas.value);
+
+    if (password.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    // Registrar en Supabase Auth
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError) {
+      alert('Error al registrarse: ' + authError.message);
+      return;
+    }
+
+    // Esperar y crear perfil
+    setTimeout(async () => {
+      const {  { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: session.user.id,
+            nombre,
+            cedula: '',
+            tipo_horas,
+          });
+
+        if (profileError) {
+          console.error('Error al crear perfil:', profileError.message);
+          alert('Cuenta creada, pero hubo un error al guardar tu perfil. Contacta al administrador.');
+        } else {
+          alert('¡Cuenta creada con éxito! Ahora puedes iniciar sesión.');
+        }
+      }
+    }, 2000);
   };
 
   const handleLogout = async () => {
@@ -125,11 +175,12 @@ function App() {
     }
   };
 
+  // Pantalla de login y registro
   if (!user) {
     return (
       <div style={{ 
-        maxWidth: '480px', 
-        margin: '80px auto 40px', 
+        maxWidth: '500px', 
+        margin: '60px auto 40px', 
         padding: '24px', 
         fontFamily: 'Inter, system-ui, sans-serif',
         textAlign: 'center'
@@ -138,18 +189,23 @@ function App() {
           Control de Horas Compensadas
         </h1>
         <p style={{ color: '#4b5563', fontSize: '14px', marginBottom: '24px' }}>
-          Inicia sesión para gestionar tus horas
+          Inicia sesión o regístrate para gestionar tus horas
         </p>
+        
+        {/* Formulario de login */}
         <form onSubmit={handleLogin} style={{ 
           background: '#fff', 
           padding: '24px', 
           borderRadius: '12px', 
           boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-          textAlign: 'left'
+          textAlign: 'left',
+          marginBottom: '20px'
         }}>
+          <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#1e40af' }}>Iniciar Sesión</h3>
           <div style={{ marginBottom: '16px' }}>
             <input
               name="email"
+              type="email"
               placeholder="Correo electrónico"
               required
               style={{
@@ -195,6 +251,101 @@ function App() {
             Iniciar Sesión
           </button>
         </form>
+
+        {/* Formulario de registro */}
+        <form onSubmit={handleSignUp} style={{ 
+          background: '#f0f9ff', 
+          padding: '24px', 
+          borderRadius: '12px', 
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          textAlign: 'left'
+        }}>
+          <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#0ea5e9' }}>Crear Cuenta</h3>
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              name="nombre"
+              placeholder="Nombre completo"
+              required
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px',
+                fontSize: '16px',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              name="email"
+              type="email"
+              placeholder="Correo institucional"
+              required
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px',
+                fontSize: '16px',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              name="password"
+              type="password"
+              placeholder="Contraseña (mín. 6 caracteres)"
+              required
+              minLength="6"
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px',
+                fontSize: '16px',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <select
+              name="tipo_horas"
+              required
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px',
+                fontSize: '16px',
+                boxSizing: 'border-box',
+                backgroundColor: 'white'
+              }}
+            >
+              <option value="">Selecciona tu objetivo de horas</option>
+              <option value="32">32 horas</option>
+              <option value="40">40 horas</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#0ea5e9',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Registrarse
+          </button>
+        </form>
+
         <footer style={{ 
           textAlign: 'center', 
           marginTop: '32px', 
@@ -207,6 +358,7 @@ function App() {
     );
   }
 
+  // Panel principal del usuario
   return (
     <div style={{ 
       maxWidth: '900px', 
@@ -251,7 +403,7 @@ function App() {
         </button>
       </header>
 
-      {/* Resumen visible */}
+      {/* Resumen de horas */}
       <div style={{ 
         background: '#dbeafe', 
         padding: '20px', 
@@ -273,7 +425,7 @@ function App() {
         </p>
       </div>
 
-      {/* Formulario */}
+      {/* Formulario de registro de horas */}
       <section style={{ 
         marginBottom: '32px', 
         background: '#fff', 
