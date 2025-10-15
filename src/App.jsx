@@ -12,6 +12,7 @@ function App() {
   const [horasOtros, setHorasOtros] = useState('');
   const [mensaje, setMensaje] = useState('');
 
+  // Verificar sesión al cargar
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -30,6 +31,7 @@ function App() {
     };
   }, []);
 
+  // Cargar datos del usuario autenticado
   useEffect(() => {
     if (!user) return;
 
