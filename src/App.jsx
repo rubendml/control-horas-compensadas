@@ -13,18 +13,32 @@ function App() {
   const [mensaje, setMensaje] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Para edición
+  const [editingId, setEditingId] = useState(null);
+  const [editIngreso, setEditIngreso] = useState('');
+  const [editSalida, setEditSalida] = useState('');
+  const [editHorasOtros, setEditHorasOtros] = useState('');
+
+  // Cerrar sesión al cerrar la pestaña
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      supabase.auth.signOut();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   // Verificar sesión y manejar confirmación de correo
   useEffect(() => {
     const initApp = async () => {
-      // Verificar si hay parámetros de URL (confirmación de correo)
       const urlParams = new URLSearchParams(window.location.search);
       const accessToken = urlParams.get('access_token');
       const refreshToken = urlParams.get('refresh_token');
 
       if (accessToken && refreshToken) {
-        // Establecer la sesión manualmente
         await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        // Limpiar la URL
         window.history.replaceState({}, document.title, window.location.pathname);
       }
 
@@ -176,6 +190,62 @@ function App() {
     }
   };
 
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingId) return;
+
+    const { error } = await supabase
+      .from('registros_horas')
+      .update({
+        ingreso_real: editIngreso || null,
+        salida_real: editSalida || null,
+        horas_otros_conceptos: parseFloat(editHorasOtros) || 0,
+      })
+      .eq('id', editingId);
+
+    if (error) {
+      setMensaje('Error al actualizar: ' + error.message);
+    } else {
+      setMensaje('Registro actualizado');
+      setEditingId(null);
+      setEditIngreso('');
+      setEditSalida('');
+      setEditHorasOtros('');
+      const { data: newRegs } = await supabase
+        .from('registros_horas')
+        .select('*')
+        .eq('user_id', user.id);
+      setRegistros(newRegs || []);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Eliminar este registro?')) return;
+
+    const { error } = await supabase
+      .from('registros_horas')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Error al eliminar: ' + error.message);
+    } else {
+      const { data: newRegs } = await supabase
+        .from('registros_horas')
+        .select('*')
+        .eq('user_id', user.id);
+      setRegistros(newRegs || []);
+    }
+  };
+
+  const handleEdit = (registro) => {
+    setEditingId(registro.id);
+    setSelectedFechaId(registro.fecha_id);
+    setEditIngreso(registro.ingreso_real || '');
+    setEditSalida(registro.salida_real || '');
+    setEditHorasOtros(registro.horas_otros_conceptos || 0);
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', marginTop: '50px' }}>
@@ -187,38 +257,38 @@ function App() {
   if (!user) {
     return (
       <div style={{
-        maxWidth: '900px',
+        width: '100%',
+        maxWidth: '1200px',
         margin: '60px auto 40px',
-        padding: '24px',
+        padding: '32px',
         fontFamily: 'Inter, system-ui, sans-serif',
         textAlign: 'center'
       }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af', marginBottom: '8px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#1e40af', marginBottom: '12px' }}>
           Control de Horas Compensadas
         </h1>
-        <p style={{ color: '#4b5563', fontSize: '14px', marginBottom: '24px' }}>
+        <p style={{ color: '#4b5563', fontSize: '16px', marginBottom: '32px' }}>
           Inicia sesión o regístrate para gestionar tus horas
         </p>
 
-        {/* Formulario de login */}
         <div style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: '40px',
+          gap: '60px',
           flexWrap: 'wrap',
-          margin: '0 auto 20px'
+          margin: '0 auto 32px'
         }}>
           <form onSubmit={handleLogin} style={{
             background: '#fff',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            padding: '32px',
+            borderRadius: '16px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
             textAlign: 'left',
-            width: '300px'
+            width: '450px'
           }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#1e40af' }}>Iniciar Sesión</h3>
-            <div style={{ marginBottom: '16px' }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '24px', color: '#1e40af', fontSize: '24px' }}>Iniciar Sesión</h3>
+            <div style={{ marginBottom: '24px' }}>
               <input
                 name="email"
                 type="email"
@@ -226,15 +296,15 @@ function App() {
                 required
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '16px',
                   border: '1px solid #d1d5db',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   fontSize: '16px',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <input
                 name="password"
                 type="password"
@@ -242,9 +312,9 @@ function App() {
                 required
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '16px',
                   border: '1px solid #d1d5db',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   fontSize: '16px',
                   boxSizing: 'border-box'
                 }}
@@ -254,12 +324,12 @@ function App() {
               type="submit"
               style={{
                 width: '100%',
-                padding: '12px',
-                background: '#2563eb',
+                padding: '16px',
+                background: '#3b82f6',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
+                borderRadius: '12px',
+                fontSize: '18px',
                 fontWeight: '600',
                 cursor: 'pointer'
               }}
@@ -268,32 +338,31 @@ function App() {
             </button>
           </form>
 
-          {/* Formulario de registro */}
           <form onSubmit={handleSignUp} style={{
             background: '#f0f9ff',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            padding: '32px',
+            borderRadius: '16px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
             textAlign: 'left',
-            width: '300px'
+            width: '450px'
           }}>
-            <h3 style={{ textAlign: 'center', marginBottom: '16px', color: '#0ea5e9' }}>Crear Cuenta</h3>
-            <div style={{ marginBottom: '16px' }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '24px', color: '#3b82f6', fontSize: '24px' }}>Crear Cuenta</h3>
+            <div style={{ marginBottom: '24px' }}>
               <input
                 name="nombre"
                 placeholder="Nombre completo"
                 required
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '16px',
                   border: '1px solid #bae6fd',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   fontSize: '16px',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <input
                 name="email"
                 type="email"
@@ -301,15 +370,15 @@ function App() {
                 required
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '16px',
                   border: '1px solid #bae6fd',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   fontSize: '16px',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <input
                 name="password"
                 type="password"
@@ -318,23 +387,23 @@ function App() {
                 minLength="6"
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '16px',
                   border: '1px solid #bae6fd',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   fontSize: '16px',
                   boxSizing: 'border-box'
                 }}
               />
             </div>
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <select
                 name="tipo_horas"
                 required
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '16px',
                   border: '1px solid #bae6fd',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   fontSize: '16px',
                   boxSizing: 'border-box',
                   backgroundColor: 'white'
@@ -349,12 +418,12 @@ function App() {
               type="submit"
               style={{
                 width: '100%',
-                padding: '12px',
-                background: '#0ea5e9',
+                padding: '16px',
+                background: '#3b82f6',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
+                borderRadius: '12px',
+                fontSize: '18px',
                 fontWeight: '600',
                 cursor: 'pointer'
               }}
@@ -366,9 +435,9 @@ function App() {
 
         <footer style={{
           textAlign: 'center',
-          marginTop: '32px',
+          marginTop: '40px',
           color: '#6b7280',
-          fontSize: '13px'
+          fontSize: '14px'
         }}>
           Derechos reservados - Creaciones Manotas
         </footer>
@@ -378,30 +447,31 @@ function App() {
 
   return (
     <div style={{
-      maxWidth: '900px',
+      width: '100%',
+      maxWidth: '1200px',
       margin: '0 auto',
-      padding: '20px',
+      padding: '32px',
       fontFamily: 'Inter, system-ui, sans-serif',
       color: '#1f2937',
       textAlign: 'center',
-      backgroundColor: '#f9fafb',
+      backgroundColor: '#f0f9ff',
       minHeight: '100vh'
     }}>
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '24px',
+        marginBottom: '32px',
         flexWrap: 'wrap',
-        gap: '12px'
+        gap: '16px'
       }}>
         <h1 style={{
-          fontSize: '22px',
+          fontSize: '28px',
           fontWeight: '700',
           color: '#1e40af',
           margin: 0
         }}>
-          ¡Hola, <span style={{ color: '#2563eb' }}>{profile?.nombre || 'Usuario'}</span>!
+          ¡Hola, <span style={{ color: '#3b82f6' }}>{profile?.nombre || 'Usuario'}</span>!
         </h1>
         <button
           onClick={handleLogout}
@@ -409,9 +479,9 @@ function App() {
             background: 'none',
             color: '#ef4444',
             border: '1px solid #ef4444',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            fontSize: '14px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            fontSize: '16px',
             cursor: 'pointer',
             whiteSpace: 'nowrap'
           }}
@@ -423,66 +493,67 @@ function App() {
       {/* Resumen visible */}
       <div style={{
         background: '#dbeafe',
-        padding: '20px',
-        borderRadius: '12px',
+        padding: '28px',
+        borderRadius: '16px',
         textAlign: 'center',
-        marginBottom: '28px',
+        marginBottom: '32px',
         border: '1px solid #bfdbfe',
-        maxWidth: '600px',
-        margin: '0 auto 28px'
+        maxWidth: '900px',
+        margin: '0 auto 32px'
       }}>
-        <p style={{ margin: '6px 0', fontSize: '16px' }}>
+        <p style={{ margin: '8px 0', fontSize: '18px' }}>
           <strong>Objetivo:</strong> <span style={{ color: '#1e40af', fontWeight: '600' }}>{profile?.tipo_horas || '—'} horas</span>
         </p>
-        <p style={{ margin: '6px 0', fontSize: '16px' }}>
-          <strong>Compensadas:</strong> <span style={{ color: '#059669', fontWeight: '600' }}>{totalCompensado.toFixed(2)} h</span>
+        <p style={{ margin: '8px 0', fontSize: '18px' }}>
+          <strong>Compensadas:</strong> <span style={{ color: '#1d4ed8', fontWeight: '600' }}>{totalCompensado.toFixed(2)} h</span>
         </p>
-        <p style={{ margin: '6px 0', fontSize: '18px', fontWeight: '700', color: pendiente > 0 ? '#d97706' : '#059669' }}>
+        <p style={{ margin: '8px 0', fontSize: '20px', fontWeight: '700', color: pendiente > 0 ? '#f59e0b' : '#1d4ed8' }}>
           <strong>Faltan:</strong> {pendiente} h
         </p>
       </div>
 
-      {/* Formulario */}
+      {/* Formulario de registro/edición */}
       <section style={{
-        marginBottom: '32px',
+        marginBottom: '36px',
         background: '#fff',
-        padding: '20px',
-        borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        maxWidth: '700px',
-        margin: '0 auto 32px',
+        padding: '32px',
+        borderRadius: '16px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+        maxWidth: '1000px',
+        margin: '0 auto 36px',
         textAlign: 'center'
       }}>
         <h2 style={{
-          fontSize: '20px',
+          fontSize: '24px',
           fontWeight: '600',
-          marginBottom: '16px',
-          color: '#1e3a8a',
+          marginBottom: '24px',
+          color: '#1e40af',
           textAlign: 'center'
         }}>
-          Registrar horas
+          {editingId ? 'Editar registro' : 'Registrar horas'}
         </h2>
-        <form onSubmit={handleSubmit} style={{ textAlign: 'center' }}>
+        <form onSubmit={editingId ? handleUpdate : handleSubmit} style={{ textAlign: 'center' }}>
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: '12px',
-            marginBottom: '16px',
-            justifyContent: 'center'
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: '16px',
+            marginBottom: '24px',
+            flexWrap: 'wrap'
           }}>
-            <div style={{ textAlign: 'left' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600' }}>Fecha</label>
+            <div style={{ textAlign: 'left', minWidth: '180px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '16px', fontWeight: '600' }}>Fecha</label>
               <select
-                value={selectedFechaId}
+                value={editingId ? selectedFechaId : selectedFechaId}
                 onChange={(e) => setSelectedFechaId(e.target.value)}
                 required
+                disabled={editingId}
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '12px',
                   border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  minWidth: '140px'
+                  borderRadius: '10px',
+                  fontSize: '16px'
                 }}
               >
                 <option value="">Selecciona fecha</option>
@@ -491,56 +562,53 @@ function App() {
                 ))}
               </select>
             </div>
-            <div style={{ textAlign: 'left' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600' }}>Ingreso real</label>
+            <div style={{ textAlign: 'left', minWidth: '180px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '16px', fontWeight: '600' }}>Ingreso real</label>
               <input
                 type="time"
-                value={ingreso}
-                onChange={(e) => setIngreso(e.target.value)}
+                value={editingId ? editIngreso : ingreso}
+                onChange={(e) => editingId ? setEditIngreso(e.target.value) : setIngreso(e.target.value)}
                 placeholder="Hora de ingreso"
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '12px',
                   border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  minWidth: '140px'
+                  borderRadius: '10px',
+                  fontSize: '16px'
                 }}
               />
             </div>
-            <div style={{ textAlign: 'left' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600' }}>Salida real</label>
+            <div style={{ textAlign: 'left', minWidth: '180px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '16px', fontWeight: '600' }}>Salida real</label>
               <input
                 type="time"
-                value={salida}
-                onChange={(e) => setSalida(e.target.value)}
+                value={editingId ? editSalida : salida}
+                onChange={(e) => editingId ? setEditSalida(e.target.value) : setSalida(e.target.value)}
                 placeholder="Hora de salida"
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '12px',
                   border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  minWidth: '140px'
+                  borderRadius: '10px',
+                  fontSize: '16px'
                 }}
               />
             </div>
-            <div style={{ textAlign: 'left' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '600' }}>Otros (h)</label>
+            <div style={{ textAlign: 'left', minWidth: '180px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '16px', fontWeight: '600' }}>Otros (h)</label>
               <input
                 type="number"
                 step="0.25"
                 min="0"
-                value={horasOtros}
-                onChange={(e) => setHorasOtros(e.target.value)}
+                value={editingId ? editHorasOtros : horasOtros}
+                onChange={(e) => editingId ? setEditHorasOtros(e.target.value) : setHorasOtros(e.target.value)}
                 placeholder="Horas por otros conceptos"
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '12px',
                   border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  minWidth: '140px'
+                  borderRadius: '10px',
+                  fontSize: '16px'
                 }}
               />
             </div>
@@ -548,20 +616,44 @@ function App() {
           <button
             type="submit"
             style={{
-              padding: '10px 24px',
-              background: '#2563eb',
+              padding: '12px 28px',
+              background: '#3b82f6',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
+              borderRadius: '10px',
+              fontSize: '18px',
               fontWeight: '600',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              marginRight: '12px'
             }}
           >
-            Guardar Registro
+            {editingId ? 'Actualizar Registro' : 'Guardar Registro'}
           </button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingId(null);
+                setIngreso('');
+                setSalida('');
+                setHorasOtros('');
+              }}
+              style={{
+                padding: '12px 28px',
+                background: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '18px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Cancelar
+            </button>
+          )}
           {mensaje && (
-            <p style={{ marginTop: '12px', color: mensaje.includes('Error') ? '#ef4444' : '#059669', fontWeight: '500' }}>
+            <p style={{ marginTop: '16px', color: mensaje.includes('Error') ? '#ef4444' : '#1d4ed8', fontWeight: '500', fontSize: '16px' }}>
               {mensaje}
             </p>
           )}
@@ -570,21 +662,21 @@ function App() {
 
       {/* Tabla de registros */}
       <section style={{
-        maxWidth: '800px',
+        maxWidth: '1100px',
         margin: '0 auto',
         textAlign: 'center'
       }}>
         <h2 style={{
-          fontSize: '20px',
+          fontSize: '24px',
           fontWeight: '600',
-          marginBottom: '16px',
-          color: '#1e3a8a',
+          marginBottom: '24px',
+          color: '#1e40af',
           textAlign: 'center'
         }}>
           Tus registros
         </h2>
         {registros.length === 0 ? (
-          <p style={{ color: '#6b7280', fontStyle: 'italic', textAlign: 'center' }}>
+          <p style={{ color: '#6b7280', fontStyle: 'italic', textAlign: 'center', fontSize: '16px' }}>
             No tienes registros aún.
           </p>
         ) : (
@@ -597,17 +689,18 @@ function App() {
             <table style={{
               width: '100%',
               borderCollapse: 'collapse',
-              fontSize: '14px',
-              minWidth: '600px',
+              fontSize: '16px',
+              minWidth: '800px',
               margin: '0 auto'
             }}>
               <thead>
                 <tr style={{ backgroundColor: '#f0f9ff' }}>
-                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Fecha</th>
-                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Ingreso real</th>
-                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Salida real</th>
-                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Otros</th>
-                  <th style={{ padding: '12px', borderBottom: '2px solid #cbd5e1' }}>Total día</th>
+                  <th style={{ padding: '16px', borderBottom: '2px solid #bfdbfe' }}>Fecha</th>
+                  <th style={{ padding: '16px', borderBottom: '2px solid #bfdbfe' }}>Ingreso real</th>
+                  <th style={{ padding: '16px', borderBottom: '2px solid #bfdbfe' }}>Salida real</th>
+                  <th style={{ padding: '16px', borderBottom: '2px solid #bfdbfe' }}>Otros</th>
+                  <th style={{ padding: '16px', borderBottom: '2px solid #bfdbfe' }}>Total día</th>
+                  <th style={{ padding: '16px', borderBottom: '2px solid #bfdbfe' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -616,11 +709,42 @@ function App() {
                   const totalDia = calcularHoras(r.ingreso_real, r.salida_real) + (r.horas_otros_conceptos || 0);
                   return (
                     <tr key={r.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '12px' }}>{fecha}</td>
-                      <td style={{ padding: '12px' }}>{r.ingreso_real || '—'}</td>
-                      <td style={{ padding: '12px' }}>{r.salida_real || '—'}</td>
-                      <td style={{ padding: '12px' }}>{r.horas_otros_conceptos || 0}</td>
-                      <td style={{ padding: '12px', fontWeight: '600', color: '#059669' }}>{totalDia.toFixed(2)}</td>
+                      <td style={{ padding: '16px' }}>{fecha}</td>
+                      <td style={{ padding: '16px' }}>{r.ingreso_real || '—'}</td>
+                      <td style={{ padding: '16px' }}>{r.salida_real || '—'}</td>
+                      <td style={{ padding: '16px' }}>{r.horas_otros_conceptos || 0}</td>
+                      <td style={{ padding: '16px', fontWeight: '600', color: '#1d4ed8' }}>{totalDia.toFixed(2)}</td>
+                      <td style={{ padding: '16px' }}>
+                        <button
+                          onClick={() => handleEdit(r)}
+                          style={{
+                            background: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            marginRight: '8px'
+                          }}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r.id)}
+                          style={{
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Eliminar
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -633,13 +757,13 @@ function App() {
       {/* Pie de página */}
       <footer style={{
         textAlign: 'center',
-        marginTop: '40px',
-        paddingTop: '20px',
+        marginTop: '50px',
+        paddingTop: '24px',
         borderTop: '1px solid #e5e7eb',
         color: '#6b7280',
-        fontSize: '13px',
-        maxWidth: '600px',
-        margin: '40px auto 0'
+        fontSize: '14px',
+        maxWidth: '800px',
+        margin: '50px auto 0'
       }}>
         Derechos reservados - Creaciones Manotas
       </footer>
