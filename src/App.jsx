@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
+import * as XLSX from 'xlsx';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -12,6 +13,10 @@ function App() {
   const [horasOtros, setHorasOtros] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  // Nuevo estado para el reporte de todos los usuarios (solo para rmonroyl)
+  const [todosUsuarios, setTodosUsuarios] = useState([]);
 
   // Para edición
   const [editingId, setEditingId] = useState(null);
@@ -61,12 +66,13 @@ function App() {
     };
   }, []);
 
-  // Cargar datos del usuario autenticado
+  // Cargar datos del usuario autenticado y todos los usuarios (si es rmonroyl)
   useEffect(() => {
     if (!user) return;
 
     const loadData = async () => {
       try {
+        // Cargar perfil del usuario actual
         const { data: prof } = await supabase
           .from('profiles')
           .select('*')
@@ -74,18 +80,56 @@ function App() {
           .single();
         setProfile(prof);
 
+        // Cargar fechas permitidas
         const { data: fech } = await supabase
           .from('fechas_permitidas')
           .select('*')
           .order('fecha', { ascending: true });
         setFechas(fech || []);
 
+        // Cargar registros del usuario actual
         const { data: regs } = await supabase
           .from('registros_horas')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         setRegistros(regs || []);
+
+        // Cargar todos los usuarios y sus registros si es rmonroyl
+        if (user.email === 'rmonroyl@cendoj.ramajudicial.gov.co') {
+          const { data: todosLosUsuarios } = await supabase
+            .from('profiles')
+            .select('*');
+
+          const { data: todosLosRegistros } = await supabase
+            .from('registros_horas')
+            .select('*');
+
+          if (todosLosUsuarios && todosLosRegistros) {
+            const usuariosConEstadisticas = todosLosUsuarios.map(usuario => {
+              const registrosUsuario = todosLosRegistros.filter(reg => reg.user_id === usuario.id);
+              const totalCompensadoUsuario = registrosUsuario.reduce((sum, r) => {
+                return sum + calcularHoras(r.ingreso_real, r.salida_real) + (r.horas_otros_conceptos || 0);
+              }, 0);
+
+              const porcentajeAvanceUsuario = usuario.tipo_horas ?
+                Math.min(100, (totalCompensadoUsuario / usuario.tipo_horas) * 100) : 0;
+              const pendienteUsuario = usuario.tipo_horas ?
+                Math.max(0, usuario.tipo_horas - totalCompensadoUsuario) : 0;
+              const porcentajeFaltanteUsuario = 100 - porcentajeAvanceUsuario;
+
+              return {
+                ...usuario,
+                totalCompensado: totalCompensadoUsuario,
+                porcentajeAvance: porcentajeAvanceUsuario,
+                pendiente: pendienteUsuario,
+                porcentajeFaltante: porcentajeFaltanteUsuario
+              };
+            });
+
+            setTodosUsuarios(usuariosConEstadisticas);
+          }
+        }
       } catch (err) {
         console.error('Error al cargar datos:', err.message);
       }
@@ -111,7 +155,18 @@ function App() {
     return sum + calcularHoras(r.ingreso_real, r.salida_real) + (r.horas_otros_conceptos || 0);
   }, 0);
 
-  const pendiente = profile ? Math.max(0, profile.tipo_horas - totalCompensado).toFixed(2) : 0;
+  const pendiente = profile ? Math.max(0, profile.tipo_horas - totalCompensado) : 0;
+  const porcentajeAvance = profile ? Math.min(100, (totalCompensado / profile.tipo_horas) * 100) : 0;
+  const porcentajeFaltante = 100 - porcentajeAvance;
+
+  // Mostrar celebración si se cumplió el objetivo - PARA TODOS LOS USUARIOS
+  useEffect(() => {
+    if (profile && pendiente <= 0 && totalCompensado > 0) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [profile, pendiente, totalCompensado]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -167,6 +222,16 @@ function App() {
       return;
     }
 
+    // VALIDACIÓN DE HORARIOS NO PERMITIDOS - PARA TODOS LOS USUARIOS
+    const ingresoValido = ingreso && ingreso < '08:00';
+    const salidaValida = salida && salida > '17:00';
+    const tieneOtros = parseFloat(horasOtros) > 0;
+
+    if (!ingresoValido && !salidaValida && !tieneOtros) {
+      setMensaje('⚠️ El ingreso debe ser antes de las 8:00 AM o la salida después de las 5:00 PM para generar compensación.');
+      return;
+    }
+
     const { error } = await supabase.from('registros_horas').insert({
       user_id: user.id,
       fecha_id: selectedFechaId,
@@ -182,17 +247,64 @@ function App() {
       setIngreso('');
       setSalida('');
       setHorasOtros('');
+      // Recargar datos
       const { data: newRegs } = await supabase
         .from('registros_horas')
         .select('*')
         .eq('user_id', user.id);
       setRegistros(newRegs || []);
+
+      // Si es rmonroyl, recargar también los datos de todos los usuarios
+      if (user.email === 'rmonroyl@cendoj.ramajudicial.gov.co') {
+        const { data: todosLosUsuarios } = await supabase
+          .from('profiles')
+          .select('*');
+
+        const { data: todosLosRegistros } = await supabase
+          .from('registros_horas')
+          .select('*');
+
+        if (todosLosUsuarios && todosLosRegistros) {
+          const usuariosConEstadisticas = todosLosUsuarios.map(usuario => {
+            const registrosUsuario = todosLosRegistros.filter(reg => reg.user_id === usuario.id);
+            const totalCompensadoUsuario = registrosUsuario.reduce((sum, r) => {
+              return sum + calcularHoras(r.ingreso_real, r.salida_real) + (r.horas_otros_conceptos || 0);
+            }, 0);
+
+            const porcentajeAvanceUsuario = usuario.tipo_horas ?
+              Math.min(100, (totalCompensadoUsuario / usuario.tipo_horas) * 100) : 0;
+            const pendienteUsuario = usuario.tipo_horas ?
+              Math.max(0, usuario.tipo_horas - totalCompensadoUsuario) : 0;
+            const porcentajeFaltanteUsuario = 100 - porcentajeAvanceUsuario;
+
+            return {
+              ...usuario,
+              totalCompensado: totalCompensadoUsuario,
+              porcentajeAvance: porcentajeAvanceUsuario,
+              pendiente: pendienteUsuario,
+              porcentajeFaltante: porcentajeFaltanteUsuario
+            };
+          });
+
+          setTodosUsuarios(usuariosConEstadisticas);
+        }
+      }
     }
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!editingId) return;
+
+    // VALIDACIÓN DE HORARIOS NO PERMITIDOS - PARA TODOS LOS USUARIOS
+    const ingresoValido = editIngreso && editIngreso < '08:00';
+    const salidaValida = editSalida && editSalida > '17:00';
+    const tieneOtros = parseFloat(editHorasOtros) > 0;
+
+    if (!ingresoValido && !salidaValida && !tieneOtros) {
+      setMensaje('⚠️ El ingreso debe ser antes de las 8:00 AM o la salida después de las 5:00 PM para generar compensación.');
+      return;
+    }
 
     const { error } = await supabase
       .from('registros_horas')
@@ -246,10 +358,54 @@ function App() {
     setEditHorasOtros(registro.horas_otros_conceptos || 0);
   };
 
+  // Exportar reporte a Excel (solo para rmonroyl@cendoj.ramajudicial.gov.co) - REPORTE GENERAL
+  const exportToExcel = () => {
+    if (!user || user.email !== 'rmonroyl@cendoj.ramajudicial.gov.co') return;
+
+    const data = [
+      ['Nombre', 'Objetivo (h)', 'Compensadas (h)', '% Avance', 'Faltantes (h)', '% Faltante']
+    ];
+
+    // Agregar todos los usuarios al reporte
+    todosUsuarios.forEach(usuario => {
+      data.push([
+        usuario.nombre || '—',
+        usuario.tipo_horas || '—',
+        usuario.totalCompensado.toFixed(2),
+        `${usuario.porcentajeAvance.toFixed(1)}%`,
+        usuario.pendiente.toFixed(2),
+        `${usuario.porcentajeFaltante.toFixed(1)}%`
+      ]);
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte General');
+    XLSX.writeFile(workbook, `reporte_general_horas_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  // INDICADOR DE ÚLTIMA ACTUALIZACIÓN - PARA TODOS LOS USUARIOS
+  const ultimaActualizacion = registros.length > 0
+    ? new Date(registros[0].created_at).toLocaleString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    : 'Nunca';
+
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', marginTop: '50px' }}>
-        <p>Cargando...</p>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      }}>
+        <p style={{ fontSize: '18px', color: '#1e40af' }}>Cargando...</p>
       </div>
     );
   }
@@ -455,15 +611,60 @@ function App() {
       color: '#1f2937',
       textAlign: 'center',
       backgroundColor: '#f0f9ff',
-      minHeight: '100vh'
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
     }}>
+      {/* CELEBRACIÓN ANIMADA - PARA TODOS LOS USUARIOS */}
+      {showCelebration && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          animation: 'fadein 0.8s ease-in'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '50px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '25px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            color: 'white',
+            animation: 'bounce 1s infinite alternate'
+          }}>
+            <h2 style={{ fontSize: '42px', marginBottom: '20px', fontWeight: 'bold' }}>🎉 ¡FELICIDADES! 🎉</h2>
+            <p style={{ fontSize: '24px', marginBottom: '15px' }}>¡Has completado tu objetivo!</p>
+            <p style={{ fontSize: '20px' }}>{profile?.tipo_horas} horas compensadas alcanzadas</p>
+            <div style={{
+              marginTop: '20px',
+              fontSize: '18px',
+              background: 'rgba(255,255,255,0.2)',
+              padding: '10px 20px',
+              borderRadius: '10px'
+            }}>
+              Total compensado: <strong>{totalCompensado.toFixed(2)} horas</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '32px',
         flexWrap: 'wrap',
-        gap: '16px'
+        gap: '16px',
+        width: '100%',
+        maxWidth: '1000px'
       }}>
         <h1 style={{
           fontSize: '28px',
@@ -490,37 +691,169 @@ function App() {
         </button>
       </header>
 
-      {/* Resumen visible */}
-      <div style={{
-        background: '#dbeafe',
-        padding: '28px',
-        borderRadius: '16px',
-        textAlign: 'center',
+      {/* TABLA DE PROGRESO INDIVIDUAL - PARA TODOS LOS USUARIOS */}
+      <section style={{
         marginBottom: '32px',
-        border: '1px solid #bfdbfe',
+        background: '#fff',
+        padding: '24px',
+        borderRadius: '16px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+        width: '100%',
         maxWidth: '900px',
-        margin: '0 auto 32px'
+        textAlign: 'center'
       }}>
-        <p style={{ margin: '8px 0', fontSize: '18px' }}>
-          <strong>Objetivo:</strong> <span style={{ color: '#1e40af', fontWeight: '600' }}>{profile?.tipo_horas || '—'} horas</span>
-        </p>
-        <p style={{ margin: '8px 0', fontSize: '18px' }}>
-          <strong>Compensadas:</strong> <span style={{ color: '#1d4ed8', fontWeight: '600' }}>{totalCompensado.toFixed(2)} h</span>
-        </p>
-        <p style={{ margin: '8px 0', fontSize: '20px', fontWeight: '700', color: pendiente > 0 ? '#f59e0b' : '#1d4ed8' }}>
-          <strong>Faltan:</strong> {pendiente} h
-        </p>
-      </div>
+        <h2 style={{
+          fontSize: '22px',
+          fontWeight: '600',
+          marginBottom: '20px',
+          color: '#1e40af',
+          textAlign: 'center'
+        }}>
+          Tu Progreso
+        </h2>
+        <table style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '16px'
+        }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f0f9ff' }}>
+              <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>Nombre</th>
+              <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>Objetivo (h)</th>
+              <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>Compensadas (h)</th>
+              <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>% Avance</th>
+              <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>Faltantes (h)</th>
+              <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>% Faltante</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+              <td style={{ padding: '12px', fontWeight: '600' }}>{profile?.nombre || '—'}</td>
+              <td style={{ padding: '12px' }}>{profile?.tipo_horas || '—'}</td>
+              <td style={{ padding: '12px' }}>{totalCompensado.toFixed(2)}</td>
+              <td style={{
+                padding: '12px',
+                color: porcentajeAvance >= 100 ? '#10b981' : '#1d4ed8',
+                fontWeight: '600'
+              }}>
+                {porcentajeAvance.toFixed(1)}%
+              </td>
+              <td style={{ padding: '12px' }}>{pendiente.toFixed(2)}</td>
+              <td style={{
+                padding: '12px',
+                color: porcentajeFaltante > 50 ? '#ef4444' : '#f59e0c',
+                fontWeight: '600'
+              }}>
+                {porcentajeFaltante.toFixed(1)}%
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-      {/* Formulario de registro/edición */}
+        {/* INDICADOR DE ÚLTIMA ACTUALIZACIÓN - PARA TODOS */}
+        <p style={{
+          marginTop: '20px',
+          fontSize: '14px',
+          color: '#6b7280',
+          fontStyle: 'italic',
+          textAlign: 'center'
+        }}>
+          <strong>Última actualización:</strong> {ultimaActualizacion}
+        </p>
+      </section>
+
+      {/* TABLA DE REPORTE GENERAL - SOLO PARA rmonroyl */}
+      {user.email === 'rmonroyl@cendoj.ramajudicial.gov.co' && (
+        <section style={{
+          marginBottom: '32px',
+          background: '#fff',
+          padding: '24px',
+          borderRadius: '16px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+          width: '100%',
+          maxWidth: '1100px',
+          textAlign: 'center'
+        }}>
+          <h2 style={{
+            fontSize: '22px',
+            fontWeight: '600',
+            marginBottom: '20px',
+            color: '#1e40af',
+            textAlign: 'center'
+          }}>
+            Reporte General de Todos los Usuarios
+          </h2>
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '16px',
+              minWidth: '800px'
+            }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f0f9ff' }}>
+                  <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>Nombre</th>
+                  <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>Objetivo (h)</th>
+                  <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>Compensadas (h)</th>
+                  <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>% Avance</th>
+                  <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>Faltantes (h)</th>
+                  <th style={{ padding: '12px', borderBottom: '2px solid #bfdbfe' }}>% Faltante</th>
+                </tr>
+              </thead>
+              <tbody>
+                {todosUsuarios.map(usuario => (
+                  <tr key={usuario.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '12px' }}>{usuario.nombre || '—'}</td>
+                    <td style={{ padding: '12px' }}>{usuario.tipo_horas || '—'}</td>
+                    <td style={{ padding: '12px' }}>{usuario.totalCompensado.toFixed(2)}</td>
+                    <td style={{
+                      padding: '12px',
+                      color: usuario.porcentajeAvance >= 100 ? '#10b981' : '#1d4ed8',
+                      fontWeight: '600'
+                    }}>
+                      {usuario.porcentajeAvance.toFixed(1)}%
+                    </td>
+                    <td style={{ padding: '12px' }}>{usuario.pendiente.toFixed(2)}</td>
+                    <td style={{
+                      padding: '12px',
+                      color: usuario.porcentajeFaltante > 50 ? '#ef4444' : '#f59e0c',
+                      fontWeight: '600'
+                    }}>
+                      {usuario.porcentajeFaltante.toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button
+            onClick={exportToExcel}
+            style={{
+              marginTop: '20px',
+              padding: '12px 24px',
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            📊 Exportar Reporte General a Excel
+          </button>
+        </section>
+      )}
+
+      {/* Formulario de registro/edición - CENTRADO */}
       <section style={{
         marginBottom: '36px',
         background: '#fff',
         padding: '32px',
         borderRadius: '16px',
         boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+        width: '100%',
         maxWidth: '1000px',
-        margin: '0 auto 36px',
         textAlign: 'center'
       }}>
         <h2 style={{
@@ -544,7 +877,7 @@ function App() {
             <div style={{ textAlign: 'left', minWidth: '180px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '16px', fontWeight: '600' }}>Fecha</label>
               <select
-                value={editingId ? selectedFechaId : selectedFechaId}
+                value={selectedFechaId}
                 onChange={(e) => setSelectedFechaId(e.target.value)}
                 required
                 disabled={editingId}
@@ -660,10 +993,10 @@ function App() {
         </form>
       </section>
 
-      {/* Tabla de registros */}
+      {/* Tabla de registros - CENTRADA */}
       <section style={{
+        width: '100%',
         maxWidth: '1100px',
-        margin: '0 auto',
         textAlign: 'center'
       }}>
         <h2 style={{
@@ -683,15 +1016,13 @@ function App() {
           <div style={{
             overflowX: 'auto',
             width: '100%',
-            margin: '0 auto',
             textAlign: 'center'
           }}>
             <table style={{
               width: '100%',
               borderCollapse: 'collapse',
               fontSize: '16px',
-              minWidth: '800px',
-              margin: '0 auto'
+              minWidth: '800px'
             }}>
               <thead>
                 <tr style={{ backgroundColor: '#f0f9ff' }}>
@@ -754,7 +1085,7 @@ function App() {
         )}
       </section>
 
-      {/* Pie de página */}
+      {/* Pie de página - CENTRADO */}
       <footer style={{
         textAlign: 'center',
         marginTop: '50px',
@@ -762,11 +1093,24 @@ function App() {
         borderTop: '1px solid #e5e7eb',
         color: '#6b7280',
         fontSize: '14px',
-        maxWidth: '800px',
-        margin: '50px auto 0'
+        width: '100%',
+        maxWidth: '800px'
       }}>
         Derechos reservados - Creaciones Manotas
       </footer>
+
+      {/* Estilos para animaciones */}
+      <style jsx>{`
+        @keyframes fadein {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes bounce {
+          from { transform: translateY(0px); }
+          to { transform: translateY(-20px); }
+        }
+      `}</style>
     </div>
   );
 }
